@@ -1,0 +1,36 @@
+# Файл должен начинаться с тега версии. Используем последнюю.
+version: '3'
+services:
+
+  postgres:
+    build:
+      context: ../../../postgres
+    env_file:
+      - ../../../postgres/.env
+    ports:
+      - 5434:5432
+
+  redis:
+    image: redis:7.0
+    ports:
+      - 6379:6379
+
+  flask:
+    build:
+      context: ../../app
+    command: sh -c "sleep 3 && python utils/collect_static.py && flask db upgrade && gunicorn -b 0.0.0.0:5000 "wsgi:app""
+    ports:
+      - 5000:5000
+    depends_on:
+      - postgres
+      - redis
+
+  tests:
+    build:
+      context: .
+    depends_on:
+      - postgres
+      - redis
+      - flask
+    volumes:
+      - ./report:/functional/report

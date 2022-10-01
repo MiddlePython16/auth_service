@@ -1,0 +1,68 @@
+import os
+from datetime import timedelta
+from functools import lru_cache
+
+from dotenv import load_dotenv
+from pydantic import BaseSettings
+
+load_dotenv()
+
+DAYS_IN_MONTH = 30
+
+
+class Settings(BaseSettings):
+    KAFKA_HOST: str
+    KAFKA_PORT: int
+    GENERATE_PASSWORD_TOPIC: str
+    EMAIL_CONFIRMATION_TOPIC: str
+
+    REDIS_HOST: str
+    REDIS_PORT: int
+
+    POSTGRES_HOST: str
+    POSTGRES_PORT: int
+    POSTGRES_DB: str
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+
+    JAEGER_HOST: str
+    JAEGER_PORT: int
+
+    REQUEST_LIMIT_PER_MINUTE: int
+
+    API_URL: str
+
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=2)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=DAYS_IN_MONTH)
+    JWT_SECRET_KEY: str
+    JWT_PUBLIC_KEY: str
+
+    GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_SECRET: str
+
+    ENABLE_LIMITER: bool
+    ENABLE_TRACER: bool
+
+    LOGSTASH_HOST: str
+    LOGSTASH_PORT: int
+    ENABLE_LOGSTASH: bool
+
+    SENTRY_DSN: str
+    ENABLE_SENTRY: bool
+
+    class Config:
+        env_file = '.env'
+
+
+# Корень проекта
+BASE_DIR = os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)),
+)
+
+
+@lru_cache()
+def get_settings():
+    return Settings()
+
+
+settings = get_settings()
