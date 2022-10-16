@@ -13,21 +13,21 @@ class AdditionalActions(str, Enum):
     first = '_first'
 
 
-def get_actions_dict(**kwargs) -> dict:
+def get_actions_dict(**kwargs) -> tuple[dict, dict]:
     actions = {}
     for action in AdditionalActions:
         if action.value in kwargs and action.value:
             actions[action.value] = kwargs.pop(action.value)
         else:
             actions[action.value] = None
-    return actions
+    return actions, kwargs
 
 
 def sqlalchemy_additional_actions():
     def func_wrapper(func):
         @wraps(func)
         def inner(*args, **kwargs):
-            actions = get_actions_dict(**kwargs)
+            actions, kwargs = get_actions_dict(**kwargs)
             query: Query = func(*args, **kwargs)
             model = kwargs['model']
 
