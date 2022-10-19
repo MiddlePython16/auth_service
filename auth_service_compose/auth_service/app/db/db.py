@@ -1,12 +1,15 @@
 from typing import Optional
 
-from core.settings import settings
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from kafka import KafkaProducer
+from kafka.errors import KafkaError
+
+from core.settings import settings
 from services.base_main import BaseSQLAlchemyStorage, MainStorage
 from services.notify_pipeline import BaseKafkaProducer, MainProducer
 from utils.exceptions import CantGetInitializedObjectError
+from utils.utils import backoff
 
 db: Optional[MainStorage] = None
 sqlalchemy = SQLAlchemy()
@@ -14,12 +17,14 @@ notify_pipeline: Optional[MainProducer] = None
 
 
 def init_sqlalchemy(app: Flask, storage: BaseSQLAlchemyStorage):
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}?options=-c%20search_path=content'  # noqa: E501, WPS221, WPS323
+    app.config[
+        'SQLALCHEMY_DATABASE_URI'] = f'postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}?options=-c%20search_path=content'  # noqa: E501, WPS221, WPS323
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
     storage.db.init_app(app)
 
 
+@backoff(exceptions=(KafkaError, ))
 def init_pipeline() -> MainProducer:
     return MainProducer(db=BaseKafkaProducer(
         db_producer=KafkaProducer(

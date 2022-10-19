@@ -119,23 +119,31 @@ class UserService(BaseCacheStorage, BaseMainStorage):  # noqa: WPS214
 
     @trace_decorator()
     def generate_password_event(self, user_id: str):
-        notify_pipeline = get_notify_pipeline()
+        try:
+            notify_pipeline = get_notify_pipeline()
 
-        key = str(uuid.uuid4()).encode('utf-8')
+            key = str(uuid.uuid4()).encode('utf-8')
 
-        message = self.get_event_model(user_id=user_id).json().encode('utf-8')
+            message = self.get_event_model(user_id=user_id).json().encode('utf-8')
 
-        notify_pipeline.send(topic=settings.GENERATE_PASSWORD_TOPIC, key=key, message=message)
+            notify_pipeline.send(topic=settings.GENERATE_PASSWORD_TOPIC, key=key, message=message)
+        except Exception:
+            pass
 
     @trace_decorator()
     def confirm_email_event(self, user_id: str):
-        notify_pipeline = get_notify_pipeline()
+        try:
+            notify_pipeline = get_notify_pipeline()
 
-        key = str(uuid.uuid4()).encode('utf-8')
+            key = str(uuid.uuid4()).encode('utf-8')
 
-        message = self.get_event_model(user_id=user_id).json().encode('utf-8')
+            message = self.get_event_model(user_id=user_id).json().encode('utf-8')
 
-        notify_pipeline.send(topic=settings.EMAIL_CONFIRMATION_TOPIC, key=key, message=message)
+            notify_pipeline.send(topic=settings.EMAIL_CONFIRMATION_TOPIC, key=key, message=message)
+        except Exception:
+            user = self.get(item_id=user_id)
+            user.email_is_confirmed = True
+            self.db.commit()
 
 
 @lru_cache()
