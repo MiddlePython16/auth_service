@@ -24,7 +24,7 @@ def init_sqlalchemy(app: Flask, storage: BaseSQLAlchemyStorage):
     storage.db.init_app(app)
 
 
-@backoff(exceptions=(KafkaError, ))
+@backoff(exceptions=(KafkaError,), factor=0, callback=lambda x: print(f'kafka fucked up {x}', flush=True))
 def init_pipeline() -> MainProducer:
     return MainProducer(db=BaseKafkaProducer(
         db_producer=KafkaProducer(

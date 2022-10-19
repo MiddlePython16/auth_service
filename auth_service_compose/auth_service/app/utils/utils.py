@@ -9,11 +9,13 @@ from functools import wraps
 from http import HTTPStatus
 from os.path import join
 from time import sleep
+from typing import Optional, Callable
 
 from flask import Flask, Response, current_app, json, request
 from flask_jwt_extended import (current_user, get_csrf_token,
                                 get_jwt_request_location)
 from flask_restx import Api
+
 from models.models import MethodEnum, User
 from services.logs_service import get_logs_service
 
@@ -126,7 +128,8 @@ def generate_password():
     return ''.join(secrets.choice(alphabet) for _ in range(PASSWORD_LEN))
 
 
-def backoff(exceptions: tuple, start_sleep_time=0.1, factor=2, border_sleep_time=10):
+def backoff(exceptions: tuple, start_sleep_time=0.1, factor=2, border_sleep_time=10,
+            callback: Optional[Callable] = None):
     """
     Функция для повторного выполнения функции через некоторое время,
     если возникла ошибка.
@@ -138,6 +141,8 @@ def backoff(exceptions: tuple, start_sleep_time=0.1, factor=2, border_sleep_time
     :param start_sleep_time: начальное время повтора
     :param factor: во сколько раз нужно увеличить время ожидания
     :param border_sleep_time: граничное время ожидания
+    :param exceptions: список экспешенов, которые отвечают за ошибку
+    :param callback: вызываемый объект, на вход передаётся ошибка
     :return: результат выполнения функции
     """
 
@@ -151,10 +156,11 @@ def backoff(exceptions: tuple, start_sleep_time=0.1, factor=2, border_sleep_time
                 sleep(t)
                 try:
                     return func(*args, **kwargs)
-                except exceptions:
-                    pass
+                except exceptions as e:
+                    if callback:
+                        callback(e)
             raise ConnectionError
 
         return inner
 
-    return
+    return func_wrapper
