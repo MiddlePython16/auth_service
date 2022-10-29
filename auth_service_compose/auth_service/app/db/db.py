@@ -8,8 +8,8 @@ from kafka.errors import KafkaError
 from core.settings import settings
 from services.base_main import BaseSQLAlchemyStorage, MainStorage
 from services.notify_pipeline import BaseKafkaProducer, MainProducer
+from utils.backoff import backoff
 from utils.exceptions import CantGetInitializedObjectError
-from utils.utils import backoff
 
 db: Optional[MainStorage] = None
 sqlalchemy = SQLAlchemy()
@@ -24,14 +24,20 @@ def init_sqlalchemy(app: Flask, storage: BaseSQLAlchemyStorage):
     storage.db.init_app(app)
 
 
-@backoff(exceptions=(KafkaError,), factor=0, callback=lambda x: print(f'kafka fucked up {x}', flush=True))
+@backoff(exceptions=(KafkaError,),
+         factor=10,
+         callback=lambda x: print(f'kafka fucked up {x}', flush=True),
+         default=None)
 def init_pipeline() -> MainProducer:
-    return MainProducer(db=BaseKafkaProducer(
-        db_producer=KafkaProducer(
-            bootstrap_servers=[f'{settings.KAFKA_HOST}:{settings.KAFKA_PORT}'],
-            api_version=(0, 11, 5),
-        ),
-    ))
+    producer = KafkaProducer(
+        bootstrap_servers=[f'{settings.KAFKA_HOST}:{settings.KAFKA_PORT}'],
+        api_version=(0, 11, 5),
+    )
+    if producer.bootstrap_connected():
+        return MainProducer(db=BaseKafkaProducer(
+            db_producer=producer,
+        ))
+    raise KafkaError
 
 
 def get_db() -> MainStorage:
@@ -40,7 +46,7 @@ def get_db() -> MainStorage:
     return db
 
 
-def get_notify_pipeline() -> MainProducer:
+def get_notify_pipeline() -> Optional[MainProducer]:
     if not notify_pipeline:
-        raise CantGetInitializedObjectError(object_name='notify producer')
+        return None
     return notify_pipeline

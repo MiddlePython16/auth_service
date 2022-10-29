@@ -113,7 +113,8 @@ def set_jwt_callbacks():  # noqa: WPS231, WPS210, WPS212
         user_roles_service = get_user_roles_service()
         role = user_roles_service.get_highest_role(identity.id)
 
-        return {'role': role.level}
+        return {'role': role.level,
+                'permissions': identity.permissions}
 
 
 def get_jwt_manager() -> Optional[JWTManager]:

@@ -1,18 +1,19 @@
 import json
 from http import HTTPStatus
 
-from api.v1.__base__ import base_url
-from extensions.jwt import jwt_parser
-from extensions.pagination import PaginatedResponse, pagination_parser
 from flask import Response, jsonify, request, url_for
 from flask_jwt_extended import jwt_required
 from flask_restx import Namespace, Resource, fields, reqparse
+from sqlalchemy.exc import IntegrityError
+from werkzeug.exceptions import BadRequest, NotFound
+
+from api.v1.__base__ import base_url
+from extensions.jwt import jwt_parser
+from extensions.pagination import PaginatedResponse, pagination_parser
 from schemas.v1 import responses, schemas
 from services.user import get_user_service
 from services.user_roles import get_user_roles_service
-from sqlalchemy.exc import IntegrityError
 from utils.utils import log_activity, make_error_response, required_role_level
-from werkzeug.exceptions import BadRequest, NotFound
 
 user = Namespace('User', path=f'{base_url}/users', description='')
 
@@ -22,6 +23,7 @@ _User = user.model(
         'id': fields.String,
         'login': fields.String,
         'email': fields.String,
+        'permissions': fields.Wildcard(fields.String),
     },
 )
 
@@ -59,12 +61,11 @@ user_post_parser.add_argument('email', type=str, location='json')
 user_post_parser.add_argument('login', type=str, location='json')
 user_post_parser.add_argument('password', type=str, location='json')
 
-user_put_parser = reqparse.RequestParser()
-user_put_parser.add_argument('password', type=str, location='json')
-user_put_parser.add_argument('login', type=str, required=False, location='json')
-user_put_parser.add_argument('email', type=str, required=False, location='json')
-user_put_parser.add_argument('new_password', type=str, required=False, location='json')
-user_put_parser.add_argument('new_password_repeat', required=False, location='json')
+user_patch_parser = reqparse.RequestParser()
+user_patch_parser.add_argument('password', required=False, type=str, location='json')
+user_patch_parser.add_argument('login', type=str, required=False, location='json')
+user_patch_parser.add_argument('email', type=str, required=False, location='json')
+user_patch_parser.add_argument('permissions', type=dict, required=False, location='json')
 
 user_roles_parser = reqparse.RequestParser()
 user_roles_parser.add_argument('role_id', type=str, location='json')
@@ -101,8 +102,8 @@ class Users(Resource):
         user_service = get_user_service()
         try:
             db_user = user_service.create_user(user_params=user_post_parser.parse_args())
-        except IntegrityError:
-            raise BadRequest(responses.USER_ALREADY_EXIST)
+        except IntegrityError as e:
+            raise BadRequest(responses.USER_ALREADY_EXIST) from e
 
         return Response(
             response=schemas.User(**db_user.dict()).json(),
@@ -131,34 +132,19 @@ class UserId(Resource):
         return jsonify(schemas.User(**user_db.dict()).dict())
 
     @log_activity()
-    @jwt_required()
+    @jwt_required(optional=True)
     @user.response(code=int(HTTPStatus.NO_CONTENT), description=' ')
     @user.response(code=int(HTTPStatus.BAD_REQUEST), description=' ')
     @user.response(code=int(HTTPStatus.CONFLICT), description=' ')
-    @user.expect(user_put_parser)
-    def put(self, user_id: str):  # noqa: WPS216, WPS210
+    @user.expect(user_patch_parser)
+    def patch(self, user_id: str):  # noqa: WPS216, WPS210
         user_service = get_user_service()
 
-        args = user_put_parser.parse_args()
+        args = user_patch_parser.parse_args()
 
-        user_db = user_service.get(item_id=user_id)
-        # Передаваемый пароль не совпал с паролем в базе данных
-        if not user_db.check_password(args.pop('password')):
-            return make_error_response(
-                status=HTTPStatus.BAD_REQUEST,
-                msg=responses.INCORRECT_PASSWORD,
-            )
-
-        new_password = args.pop('new_password')
-        new_password_repeat = args.pop('new_password_repeat')
-        if new_password or new_password_repeat:
-            if new_password != new_password_repeat:
-                return make_error_response(
-                    status=HTTPStatus.BAD_REQUEST,
-                    msg=responses.PASSWORDS_DID_NOT_MATCH,
-                )
-
-            user_service.update_password(user_id=user_id, password=new_password)
+        password = args.pop('password')
+        if password:
+            user_service.update_password(user_id=user_id, password=password)
 
         try:
             args = {key: argument for key, argument in args.items() if argument}

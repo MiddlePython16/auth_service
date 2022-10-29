@@ -14,6 +14,7 @@ class User(BaseModel):
     id: UUID4
     login: str
     email: str
+    permissions: dict
 
 
 class LoginHistory(BaseModel):

@@ -31,6 +31,9 @@ def upgrade():
     op.execute(
         """CREATE TABLE IF NOT EXISTS "logs_2022_10" PARTITION OF "logs" FOR VALUES FROM ('2022-10-01') TO ('2022-11-01')"""
     )
+    op.execute(
+        """CREATE TABLE IF NOT EXISTS "logs_2022_11" PARTITION OF "logs" FOR VALUES FROM ('2022-11-01') TO ('2022-12-01')"""
+    )
     # ### end Alembic commands ###
 
 
@@ -40,4 +43,5 @@ def downgrade():
     op.drop_table("logs_2022_08")
     op.drop_table("logs_2022_09")
     op.drop_table("logs_2022_10")
+    op.drop_table("logs_2022_11")
     # ### end Alembic commands ###
