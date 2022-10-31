@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     SENTRY_DSN: str
     ENABLE_SENTRY: bool
 
+    BILLING_URL: str
+
     class Config:
         env_file = '.env'
 
