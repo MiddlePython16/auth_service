@@ -224,7 +224,7 @@ class UserRoleDelete(Resource):
 @user.route('/<user_id>/role/highest_role')
 class UserHighestRole(Resource):
     @log_activity()
-    @jwt_required()
+    @jwt_required(optional=True)
     @user.response(code=int(HTTPStatus.OK), description=' ', model=HighestRoleLevel)
     def get(self, user_id: str):
         user_roles_service = get_user_roles_service()
@@ -241,8 +241,7 @@ class UserHighestRole(Resource):
 @user.route('/<user_id>/password')
 class UserPassword(Resource):
     @log_activity()
-    @jwt_required()
-    @required_role_level(level=10)
+    @jwt_required(optional=True)
     @user.response(code=int(HTTPStatus.OK), description=' ', model=GeneratePassword)
     def get(self, user_id: str):
         user_service = get_user_service()
@@ -259,8 +258,7 @@ class UserPassword(Resource):
 @user.route('/<user_id>/confirm_url')
 class GetUserConfirmURL(Resource):
     @log_activity()
-    @jwt_required()
-    @required_role_level(level=10)
+    @jwt_required(optional=True)
     @user.response(code=int(HTTPStatus.OK), description=' ', model=ConfirmURL)
     def get(self, user_id: str):
         user_service = get_user_service()
