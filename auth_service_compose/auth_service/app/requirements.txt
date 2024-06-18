@@ -1,15 +1,15 @@
-Flask==2.1.2
+Flask==2.2.5
 Flask-SQLAlchemy==2.5.1
 gevent==21.12.0
-gunicorn==20.1.0
+gunicorn==22.0.0
 python-dotenv==0.20.0
-pydantic==1.9.0
+pydantic==1.10.13
 psycopg2-binary==2.9.3
 SQLAlchemy-serializer==1.4.1
 Flask-JWT-Extended==4.4.2
-Werkzeug==2.1.2
+Werkzeug==3.0.3
 Flask-WTF==1.0.1
-redis==4.3.4
+redis==4.3.6
 flask-migrate==3.1.0
 flasgger==0.9.5
 flask-restx==0.5.1
@@ -23,3 +23,5 @@ python-logstash==0.4.8
 sentry-sdk==1.9.5
 blinker==1.5
 kafka-python==2.0.2
+opentelemetry-instrumentation>=0.41b0 # not directly required, pinned by Snyk to avoid a vulnerability
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
